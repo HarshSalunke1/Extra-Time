@@ -430,10 +430,7 @@ const midLayer = document.querySelector('.layer-mid');
 const fgLayer = document.querySelector('.layer-fg');
 
 function handleMouseMove(e) {
-  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-  const hero = document.querySelector('.hero-section');
-  if (!hero) return;
-  const r = hero.getBoundingClientRect();
+  const r = document.querySelector('.hero-section').getBoundingClientRect();
   const mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
   const my = ((e.clientY - r.top) / r.height - 0.5) * 2;
 
