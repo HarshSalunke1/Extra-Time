@@ -71,6 +71,15 @@ function shuffle(array, avoidFirst = -1) {
   return indices;
 }
 
+const ERROR_DESCRIPTIONS = {
+  2: 'bad parameter (2)',
+  5: 'player error (5)',
+  100: 'video not found (100)',
+  101: 'embedding blocked (101)',
+  150: 'embedding blocked (150)',
+  153: 'missing referrer (153)'
+};
+
 // YouTube IFrame API Ready Callback
 window.onYouTubeIframeAPIReady = function() {
   player = new YT.Player('yt-player', {
@@ -83,8 +92,10 @@ window.onYouTubeIframeAPIReady = function() {
       fs: 0,
       playsinline: 1,
       rel: 0,
+      enablejsapi: 1,
       modestbranding: 1,
-      origin: window.location.origin
+      origin: window.location.origin,
+      widget_referrer: window.location.origin
     },
     events: {
       onReady: onPlayerReady,
@@ -118,22 +129,34 @@ function onPlayerStateChange(event) {
 }
 
 function onPlayerError(event) {
-  console.warn('[ET Radio] YouTube error code:', event.data, 'for track index:', currentQueueIndex);
+  const code = event.data;
+  const meaning = ERROR_DESCRIPTIONS[code] || `player error (${code})`;
+  console.log(`[YouTube Player onError]: Error ${code} - ${meaning}`);
+  console.error(`YouTube Error ${code}: ${meaning}`);
+
+  // Show error in UI
+  trackTitleEl.textContent = `Error ${code}: ${meaning} — Skipping…`;
+  trackTitleEl.title = `Error ${code}: ${meaning}`;
+
   consecutiveFailures++;
 
   if (consecutiveFailures >= activePlaylist.length) {
     // If every video failed, show "Reconnecting…" and retry
-    trackTitleEl.textContent = 'Reconnecting…';
-    trackTitleEl.title = 'Reconnecting…';
     setTimeout(() => {
-      consecutiveFailures = 0;
-      shuffledIndices = shuffle(activePlaylist);
-      currentQueueIndex = 0;
-      loadAndPlayCurrentTrack();
-    }, 3000);
+      trackTitleEl.textContent = 'Reconnecting…';
+      trackTitleEl.title = 'Reconnecting…';
+      setTimeout(() => {
+        consecutiveFailures = 0;
+        shuffledIndices = shuffle(activePlaylist);
+        currentQueueIndex = 0;
+        loadAndPlayCurrentTrack();
+      }, 3000);
+    }, 1500);
   } else {
-    // Automatically skip to the next track
-    nextTrack(true);
+    // Automatically skip to the next track after a brief visible pause
+    setTimeout(() => {
+      nextTrack(true);
+    }, 1200);
   }
 }
 
@@ -480,3 +503,10 @@ if (heroSec) {
 const initialFirst = DEFAULT_PLAYLIST[Math.floor(Math.random() * DEFAULT_PLAYLIST.length)];
 trackTitleEl.textContent = `${initialFirst.artist} — ${initialFirst.title}`;
 trackTitleEl.title = `${initialFirst.artist} — ${initialFirst.title}`;
+
+// Ensure YouTube IFrame API script is present
+if (!window.YT && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+  const ytScript = document.createElement('script');
+  ytScript.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(ytScript);
+}
