@@ -80,8 +80,9 @@ const ERROR_DESCRIPTIONS = {
   153: 'missing referrer (153)'
 };
 
-// YouTube IFrame API Ready Callback
-window.onYouTubeIframeAPIReady = function() {
+// YouTube IFrame API Ready Callback & Initialization
+function initYouTubePlayer() {
+  if (player || !window.YT || !window.YT.Player) return;
   player = new YT.Player('yt-player', {
     height: '240',
     width: '240',
@@ -103,14 +104,44 @@ window.onYouTubeIframeAPIReady = function() {
       onError: onPlayerError
     }
   });
+}
+
+window.onYouTubeIframeAPIReady = function() {
+  initYouTubePlayer();
 };
+
+if (window.YT && window.YT.Player) {
+  initYouTubePlayer();
+}
 
 function onPlayerReady(event) {
   playerReady = true;
+  const iframe = document.getElementById('yt-player');
+  if (iframe) {
+    iframe.setAttribute('allow', 'autoplay; encrypted-media');
+  }
+  if (!isMuted && player) {
+    try {
+      player.unMute();
+      player.setVolume(100);
+    } catch (e) {}
+  }
   // If user already clicked play before iframe API finished loading
   if (hasStarted && isPlaying) {
-    startPlayback();
+    loadAndPlayCurrentTrack();
   }
+}
+
+function ensureUnmuted() {
+  if (isMuted || !player) return;
+  try {
+    if (typeof player.isMuted === 'function' && player.isMuted()) {
+      player.unMute();
+    }
+    if (typeof player.setVolume === 'function') {
+      player.setVolume(100);
+    }
+  } catch (e) {}
 }
 
 function onPlayerStateChange(event) {
@@ -119,12 +150,11 @@ function onPlayerStateChange(event) {
     consecutiveFailures = 0;
     updatePlayStateUI(true);
     updateTrackTitleFromPlayer();
-    try {
-      if (!isMuted && player) {
-        player.unMute();
-        player.setVolume(100);
-      }
-    } catch (e) {}
+    ensureUnmuted();
+    setTimeout(ensureUnmuted, 200);
+    setTimeout(ensureUnmuted, 600);
+  } else if (event.data === YT.PlayerState.BUFFERING) {
+    ensureUnmuted();
   } else if (event.data === YT.PlayerState.PAUSED) {
     isPlaying = false;
     updatePlayStateUI(false);
@@ -202,10 +232,17 @@ function loadAndPlayCurrentTrack() {
   trackTitleEl.textContent = display;
   trackTitleEl.title = display;
 
-  if (player && player.loadVideoById) {
-    player.unMute();
-    player.setVolume(100);
-    player.loadVideoById(track.id);
+  if (player && typeof player.loadVideoById === 'function') {
+    try {
+      if (!isMuted) {
+        player.unMute();
+        player.setVolume(100);
+      }
+      player.loadVideoById(track.id);
+      player.playVideo();
+    } catch (e) {
+      console.warn('Error loading video:', e);
+    }
     isPlaying = true;
     updatePlayStateUI(true);
   }
@@ -242,6 +279,13 @@ function updatePlayStateUI(playing) {
 }
 
 function togglePlay() {
+  if (!isMuted && player) {
+    try {
+      player.unMute();
+      player.setVolume(100);
+    } catch (e) {}
+  }
+
   if (!hasStarted) {
     startPlayback();
     return;
@@ -260,6 +304,12 @@ function togglePlay() {
     if (customAudioElement && isCustomMode) {
       customAudioElement.play();
     } else if (player && player.playVideo) {
+      try {
+        if (!isMuted) {
+          player.unMute();
+          player.setVolume(100);
+        }
+      } catch (e) {}
       player.playVideo();
     }
     isPlaying = true;
