@@ -119,6 +119,12 @@ function onPlayerStateChange(event) {
     consecutiveFailures = 0;
     updatePlayStateUI(true);
     updateTrackTitleFromPlayer();
+    try {
+      if (!isMuted && player) {
+        player.unMute();
+        player.setVolume(100);
+      }
+    } catch (e) {}
   } else if (event.data === YT.PlayerState.PAUSED) {
     isPlaying = false;
     updatePlayStateUI(false);
