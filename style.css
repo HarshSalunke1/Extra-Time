@@ -434,12 +434,9 @@ header {
   line-height: 1;
 }
 
-.nav-links {
+.nav-actions {
   display: flex;
   align-items: center;
-  gap: 32px;
-  font-size: 14px;
-  letter-spacing: 0.04em;
 }
 
 .nav-btn {
@@ -869,8 +866,15 @@ footer {
   color: #ff6b6b;
 }
 
-@media (max-width: 720px) {
-  .nav-links { display: none; }
+@media (max-width: 480px) {
+  .brand-title {
+    font-size: 22px;
+  }
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
